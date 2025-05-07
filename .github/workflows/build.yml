@@ -1,0 +1,45 @@
+name: Build WebView APK and AAB
+
+on:
+  push:
+    paths:
+      - 'input/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Generate Keystore
+      run: |
+        keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key \
+        -storepass android -keypass android -dname "CN=Example, OU=Dev, O=Company, L=City, S=State, C=US"
+
+    - name: Set up Gradle
+      run: chmod +x gradlew
+
+    - name: Build APK & AAB
+      run: ./gradlew assembleRelease bundleRelease
+
+    - name: Zip APK, AAB, and JKS
+      run: |
+        mkdir output
+        cp app/build/outputs/apk/release/*.apk output/
+        cp app/build/outputs/bundle/release/*.aab output/
+        cp my-release-key.jks output/
+        cd output && zip -r ../build-output.zip . && cd ..
+
+    - name: Upload Build ZIP
+      uses: actions/upload-artifact@v3
+      with:
+        name: WebViewApp-Build
+        path: build-output.zip
