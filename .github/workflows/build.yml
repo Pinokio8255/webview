@@ -19,27 +19,47 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Install jq
+      run: sudo apt-get install -y jq
+
+    - name: Read config.json and Replace Placeholders
+      run: |
+        APP_NAME=$(jq -r .app_name input/config.json)
+        PACKAGE_NAME=$(jq -r .package_name input/config.json)
+        APP_URL=$(jq -r .url input/config.json)
+
+        echo "Replacing placeholders..."
+        sed -i "s/APP_NAME_PLACEHOLDER/$APP_NAME/g" app/src/main/res/values/strings.xml
+        sed -i "s|APP_URL_PLACEHOLDER|$APP_URL|g" app/src/main/java/com/example/webview/MainActivity.java
+        sed -i "s/com.example.webview/$PACKAGE_NAME/g" app/build.gradle
+
+    - name: Replace App Icon
+      run: |
+        cp input/icon.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+        cp input/icon.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+        cp input/icon.png app/src/main/res/mipmap-xhdpi/ic_launcher.png
+        cp input/icon.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+        cp input/icon.png app/src/main/res/mipmap-mdpi/ic_launcher.png
+
     - name: Generate Keystore
       run: |
-        keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key \
-        -storepass android -keypass android -dname "CN=Example, OU=Dev, O=Company, L=City, S=State, C=US"
+        keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-key -storepass android -keypass android -dname "CN=App, OU=Dev, O=Company, L=City, S=State, C=IN"
 
-    - name: Set up Gradle
+    - name: Set Permissions
       run: chmod +x gradlew
 
     - name: Build APK & AAB
       run: ./gradlew assembleRelease bundleRelease
 
-    - name: Zip APK, AAB, and JKS
+    - name: Prepare Output
       run: |
         mkdir output
         cp app/build/outputs/apk/release/*.apk output/
         cp app/build/outputs/bundle/release/*.aab output/
         cp my-release-key.jks output/
-        cd output && zip -r ../build-output.zip . && cd ..
 
-    - name: Upload Build ZIP
+    - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
-        name: WebViewApp-Build
-        path: build-output.zip
+        name: WebViewApp
+        path: output/
