@@ -2,9 +2,13 @@ name: Android Build
 
 on:
   push:
-    branches: [ master ]   # ✅ Make sure your PHP script pushes to this branch
+    branches: [ master ]
     paths:
-      - 'input/**'         # ✅ Trigger only when files in "input/" change
+      - 'input/**'
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   build:
@@ -35,7 +39,7 @@ jobs:
         run: ./gradlew clean assembleRelease bundleRelease
 
       - name: Upload APK & AAB
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: build-artifacts
           path: |
